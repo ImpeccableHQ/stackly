@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 
+import {GasMeter} from "./helper/GasMeter.sol";
 import {ERC20Mintable} from "./common/ERC20Mintable.sol";
 import {MockSettlement} from "./common/MockSettlement.sol";
 import {SafeMath} from "oz/utils/math/SafeMath.sol";
@@ -11,7 +12,7 @@ import {GPv2Order} from "../src/libraries/GPv2Order.sol";
 import {DCAOrder, NotOwner, NotWithinStartAndEndTimes} from "../src/DCAOrder.sol";
 import {IConditionalOrder} from "../src/interfaces/IConditionalOrder.sol";
 
-contract DCAOrderTest is Test {
+contract DCAOrderTest is Test, GasMeter {
   using GPv2Order for GPv2Order.Data;
 
   MockSettlement public mockSettlement;
@@ -255,6 +256,41 @@ contract DCAOrderTest is Test {
     // Should revert because the order is not tradeable
     vm.expectRevert(NotWithinStartAndEndTimes.selector);
     order = dcaOrder.getTradeableOrder();
+  }
+
+  function testGetTradeableOrder_GasUsage() public {
+    uint256 _testAmount = 30 ether;
+
+    dcaOrder.initialize(
+      _owner, _receiver, _sellToken, _buyToken, _testAmount, _startTime, _endTime, _interval, address(mockSettlement)
+    );
+
+    // warp to the startTime of the order
+    vm.warp(dcaOrder.startTime());
+
+    gasMeterStart();
+    dcaOrder.getTradeableOrder();
+    uint256 gas = gasMeterStop();
+
+    assertLt(gas, 40000);
+  }
+
+  function testGetTradeableOrder_GasUsage_2_years() public {
+    // 2 year long hourly stack
+    uint256 endTime = _startTime + (1 days * 365 * 2);
+    uint256 interval = 1;
+    dcaOrder.initialize(
+      _owner, _receiver, _sellToken, _buyToken, 30 ether, _startTime, endTime, interval, address(mockSettlement)
+    );
+
+    // warp to the startTime of the order
+    vm.warp(dcaOrder.startTime());
+
+    gasMeterStart();
+    dcaOrder.getTradeableOrder();
+    uint256 gas = gasMeterStop();
+
+    assertLt(gas, 40000);
   }
 
   function testGetTradeableOrder_OrderCancelled() public {

@@ -12,7 +12,8 @@
     "lint": "turbo run lint",
     "lint:commit-message": "commitlint -e",
     "format": "turbo run format",
-    "husky": "husky install"
+    "husky": "husky install",
+    "s": "gql-gen --config codegen.yml"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.4.2",
@@ -20,7 +21,8 @@
     "eslint-config-custom": "workspace:0.0.0",
     "husky": "^8.0.3",
     "prettier": "^2.8.3",
-    "turbo": "^1.7.0"
+    "turbo": "^1.7.0",
+    "graphql-codegen-typescript-common": "0.18.2"
   },
   "engines": {
     "node": ">=16.0.0"

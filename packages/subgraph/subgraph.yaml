@@ -1,4 +1,6 @@
 specVersion: 0.0.4
+features:
+  - nonFatalErrors
 schema:
   file: ./schema.graphql
 dataSources:
@@ -6,13 +8,14 @@ dataSources:
     kind: ethereum/contract
     network: gnosis
     source:
-      address: '0x45B91Da2834010751b17F1eadE0a5a7B64233add'
-      startBlock: 28800393
+      address: "0x40CF89E715F1fA37799fC3a17681a4C6a7bdfdd0"
+      startBlock: 26488660
       abi: OrderFactory
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
       language: wasm/assemblyscript
+      file: ./src/mappings/factory.ts
       entities:
         - OrderFactory
       abis:
@@ -21,7 +24,6 @@ dataSources:
       eventHandlers:
         - event: OrderCreated(indexed address)
           handler: handleDCAOrderCreated
-      file: ./src/mappings/factory.ts
 templates:
   - name: DCAOrder
     kind: ethereum/contract
@@ -32,19 +34,17 @@ templates:
       kind: ethereum/events
       apiVersion: 0.0.6
       language: wasm/assemblyscript
+      file: ./src/mappings/order.ts
       entities:
         - Order
         - Token
       abis:
         - name: DCAOrder
-          file: abis/DCAOrder.json
+          file: ./abis/DCAOrder.json
         - name: ERC20
           file: ./abis/ERC20.json
-        - name: OrderFactory
-          file: ./abis/OrderFactory.json
       eventHandlers:
         - event: Initialized(indexed address)
           handler: handleDCAOrderInitialized
         - event: Cancelled(indexed address)
           handler: handleDCAOrderCancelled
-      file: ./src/mappings/order.ts

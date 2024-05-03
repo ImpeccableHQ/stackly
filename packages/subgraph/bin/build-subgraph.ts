@@ -1,4 +1,4 @@
-import { writeFile, } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { stringify as yamlStringify } from 'yaml';
 
 import { config } from './config';
@@ -7,8 +7,8 @@ async function main() {
   // get network from command line
   const network = process.argv[2] as string | undefined;
   // validate network
-  if (!network || !['mainnet', 'xdai'].includes(network)) {
-    throw new Error('Invalid network. Must be one of: mainnet, xdai');
+  if (!network || !['mainnet', 'gnosis'].includes(network)) {
+    throw new Error('Invalid network. Must be one of: mainnet, gnosis');
   }
 
   const subgraph = {
@@ -61,8 +61,12 @@ async function main() {
           apiVersion: '0.0.6',
           language: 'wasm/assemblyscript',
           file: './src/mappings/order.ts',
-          entities: ['Order', 'Token'],
+          entities: ['OrderFactory', 'Order', 'Token'],
           abis: [
+            {
+              name: 'OrderFactory',
+              file: './abis/OrderFactory.json',
+            },
             {
               name: 'DCAOrder',
               file: './abis/DCAOrder.json',

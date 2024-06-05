@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.20;
 
-import "forge-std/Test.sol";
-import {ERC20Mintable} from "./common/ERC20Mintable.sol";
-import {ERC721Mintable} from "./common/ERC721Mintable.sol";
-import {MockSettlement} from "./common/MockSettlement.sol";
+import 'forge-std/Test.sol';
+import {ERC20Mintable} from './common/ERC20Mintable.sol';
+import {ERC721Mintable} from './common/ERC721Mintable.sol';
+import {MockSettlement} from './common/MockSettlement.sol';
 
-import {DCAOrder, AlreadyInitialized} from "../src/DCAOrder.sol";
-import {OrderFactory} from "../src/OrderFactory.sol";
+import {DCAOrder, AlreadyInitialized} from '../src/DCAOrder.sol';
+import {OrderFactory} from '../src/OrderFactory.sol';
 
 interface CheatCodes {
   function prank(address) external;
@@ -40,7 +40,7 @@ contract OrderFactoryTest is Test {
     sellToken = new ERC20Mintable('Test Token', 'TEST');
     whitelistNFT = new ERC721Mintable('Test NFT', 'TEST');
     mastercopy = new DCAOrder();
-    factory = new OrderFactory(address(whitelistNFT));
+    factory = new OrderFactory();
     cheatCodes = CheatCodes(HEVM_ADDRESS);
 
     uint256 mastercopyStartTime = block.timestamp + 1 days;
@@ -123,20 +123,6 @@ contract OrderFactoryTest is Test {
       1
     );
   }
-  
-  function testCreateOrderWithNonceDisabledWhitelist() public {
-    // Burn whitelist NFT
-    whitelistNFT.burn(1);
-
-    // Disable whitelist
-    factory.toggleWhitelist();
-
-    // Check whitelist was disabled
-    assertEq(factory.whitelist(), false);
-
-    // Create a stack
-    testCreateOrderWithNonce();
-  }
 
   function testSetProtocolFee() public {
     // Update protocol fee from owner
@@ -149,7 +135,7 @@ contract OrderFactoryTest is Test {
     cheatCodes.prank(address(1337));
 
     // Expect a revert because caller is not owner
-    vm.expectRevert(bytes("Ownable: caller is not the owner"));
+    vm.expectRevert(bytes('Ownable: caller is not the owner'));
 
     factory.setProtocolFee(5);
 
@@ -190,21 +176,7 @@ contract OrderFactoryTest is Test {
     cheatCodes.prank(address(1337));
 
     // Expect a revert because caller is not owner
-    vm.expectRevert(bytes("Ownable: caller is not the owner"));
+    vm.expectRevert(bytes('Ownable: caller is not the owner'));
     factory.withdrawTokens(tokens);
-  }
-
-  function testToggleWhitelist() public {
-    assertEq(factory.whitelist(), true);
-    factory.toggleWhitelist();
-    assertEq(factory.whitelist(), false);
-    factory.toggleWhitelist();
-    assertEq(factory.whitelist(), true);
-
-    // Set caller to a different address
-    cheatCodes.prank(address(1335));
-
-    vm.expectRevert(bytes("Ownable: caller is not the owner"));
-    factory.toggleWhitelist();
   }
 }

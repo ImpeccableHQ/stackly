@@ -7,35 +7,64 @@ import { OrderFactory } from '../../generated/OrderFactory/OrderFactory';
 const HUNDRED_PERCENT = BigInt.fromI32(10000);
 
 export function createOrReturnTokenEntity(contractAddress: Address): Token {
-  // Persist token data if it doesn't already exist
-  let token = Token.load(contractAddress.toHex());
+  let tokenId = contractAddress.toHex();
+  let token = Token.load(tokenId);
+
+  // Return existing token if it's already in the store
   if (token !== null) {
     return token;
   }
+
+  // Create a new token entity
+  token = new Token(tokenId);
   let tokenContract = ERC20Contract.bind(contractAddress);
-  token = new Token(contractAddress.toHex());
-  token.name = tokenContract.name();
-  token.symbol = tokenContract.symbol();
-  token.decimals = tokenContract.decimals();
+
+  // Name
+  let tryName = tokenContract.try_name();
+  token.name = tryName.reverted ? 'Unknown Token' : tryName.value;
+
+  // Symbol
+  let trySymbol = tokenContract.try_symbol();
+  token.symbol = trySymbol.reverted ? 'UNKNOWN' : trySymbol.value;
+
+  // Decimals
+  let tryDecimals = tokenContract.try_decimals();
+  token.decimals = tryDecimals.reverted ? 18 : tryDecimals.value;
+
   token.save();
   return token;
 }
 
 export function handleDCAOrderInitialized(event: Initialized): void {
-  const orderContract = DCAOrderContract.bind(event.params.order);
-  const order = new DCAOrder(event.params.order.toHex());
-  order.createdAt = event.block.timestamp;
-  order.owner = orderContract.owner();
-  order.sellToken = createOrReturnTokenEntity(orderContract.sellToken()).id;
-  order.buyToken = createOrReturnTokenEntity(orderContract.buyToken()).id;
-  order.receiver = orderContract.receiver();
+  const orderAddress = event.params.order;
+  const orderContract = DCAOrderContract.bind(orderAddress);
+  const order = new DCAOrder(orderAddress.toHex());
 
-  let orderSlots: Array<BigInt> = [];
-  orderSlots.push(BigInt.fromI32(0));
+  order.createdAt = event.block.timestamp;
+
+  let tryOwner = orderContract.try_owner();
+  order.owner = tryOwner.reverted ? Address.fromString('0x0000000000000000000000000000000000000000') : tryOwner.value;
+
+  let trySellToken = orderContract.try_sellToken();
+  order.sellToken = trySellToken.reverted ? '' : createOrReturnTokenEntity(trySellToken.value).id;
+
+  let tryBuyToken = orderContract.try_buyToken();
+  order.buyToken = tryBuyToken.reverted ? '' : createOrReturnTokenEntity(tryBuyToken.value).id;
+
+  let tryReceiver = orderContract.try_receiver();
+  order.receiver = tryReceiver.reverted
+    ? Address.fromString('0x0000000000000000000000000000000000000000')
+    : tryReceiver.value;
+
+  let orderSlots: Array<BigInt> = [BigInt.fromI32(0)];
   let protocolFee: BigInt = BigInt.fromI32(0);
-  let orderFactoryAddress: Address = (
-    event.transaction.to !== null ? event.transaction.to : Address.fromString('0x0')
-  )!;
+
+  let orderFactoryAddress: Address;
+  if (event.transaction.to !== null) {
+    orderFactoryAddress = event.transaction.to as Address;
+  } else {
+    orderFactoryAddress = Address.fromString('0x0000000000000000000000000000000000000000');
+  }
 
   const factory = OrderFactory.bind(orderFactoryAddress);
   let tryProtocolFee = factory.try_protocolFee();
@@ -48,13 +77,23 @@ export function handleDCAOrderInitialized(event: Initialized): void {
     orderSlots = tryOrderSlots.value;
   }
 
-  order.amount = orderContract.amount();
+  let tryAmount = orderContract.try_amount();
+  order.amount = tryAmount.reverted ? BigInt.fromI32(0) : tryAmount.value;
+
   order.fee = protocolFee;
   order.feeAmount = order.amount.times(protocolFee).div(HUNDRED_PERCENT.minus(protocolFee));
-  order.endTime = orderContract.endTime().toI32();
-  order.startTime = orderContract.startTime().toI32();
+
+  let tryEndTime = orderContract.try_endTime();
+  order.endTime = tryEndTime.reverted ? 0 : tryEndTime.value.toI32();
+
+  let tryStartTime = orderContract.try_startTime();
+  order.startTime = tryStartTime.reverted ? 0 : tryStartTime.value.toI32();
+
   order.orderSlots = orderSlots;
-  order.interval = orderContract.interval();
+
+  let tryInterval = orderContract.try_interval();
+  order.interval = tryInterval.reverted ? BigInt.fromI32(0) : tryInterval.value;
+
   order.save();
 }
 

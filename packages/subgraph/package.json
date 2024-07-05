@@ -6,6 +6,7 @@
     "auth": "npx graph auth https://api.thegraph.com/deploy/",
     "codegen": "npx graph codegen",
     "build": "npm run prepare:gnosis && npx graph build",
+    "build:gnosis": "graph build",
     "prepare:gnosis": "ts-node bin/build-subgraph.ts xdai && npm run codegen",
     "prepare:mainnet": "ts-node bin/build-subgraph.ts mainnet && npm run codegen",
     "deploy": "npx graph deploy --node https://api.thegraph.com/deploy/ swaprhq/stackly",
@@ -15,8 +16,8 @@
     "test": "echo 'No tests yet, implement them'"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "0.51.2",
-    "@graphprotocol/graph-ts": "0.31.0",
+    "@graphprotocol/graph-cli": "0.78.0",
+    "@graphprotocol/graph-ts": "0.35.1",
     "@types/node": "^18.11.18",
     "ts-node": "^10.8.2",
     "yaml": "^2.2.1"

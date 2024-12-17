@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.28;
 
 import 'forge-std/Test.sol';
 import {ERC20Mintable} from './common/ERC20Mintable.sol';

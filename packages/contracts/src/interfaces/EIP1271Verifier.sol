@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 library GPv2EIP1271 {
   /// @dev Value returned by a call to `isValidSignature` if the signature

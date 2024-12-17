@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 contract GasMeter {
   uint256 private meter;
@@ -9,7 +9,7 @@ contract GasMeter {
     if (meter != 0) {
       revert MeterAlreadyStarted();
     }
-    
+
     // -100 ~accounts for this call itself
     meter = gasleft() - 100;
   }

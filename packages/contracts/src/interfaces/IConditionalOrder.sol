@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 pragma abicoder v2;
 
-import {GPv2Order} from "../libraries/GPv2Order.sol";
+import {GPv2Order} from '../libraries/GPv2Order.sol';
 
 interface IConditionalOrder {
   /// Event that should be emitted in constructor so that the service "watching" for conditional orders can start indexing it

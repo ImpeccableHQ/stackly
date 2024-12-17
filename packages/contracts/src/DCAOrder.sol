@@ -204,12 +204,17 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
 
   /// @dev get the total number of orders that will be executed between the start and end time
   function orderSlots() public view returns (uint256[] memory slots) {
-    uint256 total = Math.ceilDiv(BokkyPooBahsDateTimeLibrary.diffHours(startTime, endTime), interval);
+    uint256 _startTime = startTime;
+    uint256 _interval = interval;
+    uint256 intervalHours = _interval * 1 hours;
+    uint256 total = Math.ceilDiv(BokkyPooBahsDateTimeLibrary.diffHours(_startTime, endTime), _interval);
+
     slots = new uint256[](total);
-    // Create execution orders
+
+    uint256 nextSlot = _startTime;
     for (uint256 i = 0; i < total; i++) {
-      uint256 orderExecutionTime = startTime + (i * interval * 1 hours);
-      slots[i] = orderExecutionTime;
+      slots[i] = nextSlot;
+      nextSlot += intervalHours;
     }
     return slots;
   }
@@ -218,6 +223,7 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
   /// @dev a slot is consider current if the current time is greater than the slot time and less than the next slot time (if it exists)
   function currentSlot() public view returns (uint256 slot) {
     uint256 _startTime = startTime;
+    uint256 _endTime = endTime;
     uint256 currentTime = block.timestamp;
 
     // Calculate the next time slot based on the current time
@@ -226,7 +232,7 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
     }
 
     // If the curernt time is beyond the end time, return 0 indicating no further time slots
-    if (currentTime > endTime) {
+    if (currentTime > _endTime) {
       return 0;
     }
 
@@ -243,15 +249,21 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
         intervalTimestamp) > endTime;
   }
 
-  function slotSellAmount() public view returns (uint256 orderSellAmount) {
-    if (isLastSlot()) {
-      return sellToken.balanceOf(address(this));
-    }
+  /// @dev returns the sell amount for the each slot
+  function slotSellAmount() public view returns (uint256) {
+    // Execute at the specified frequency
+    // Each order sellAmount is the balance of the order divided by the frequency
+    // If the current slot is the last slot, the returned amount is the total sellToken balance
 
     if (block.timestamp >= endTime) {
       return 0;
     }
 
+    if (isLastSlot()) {
+      return sellToken.balanceOf(address(this));
+    }
+
+    // Use storage variables directly since they're only accessed once
     uint256 totalSlots = Math.ceilDiv(BokkyPooBahsDateTimeLibrary.diffHours(startTime, endTime), interval);
     return amount / totalSlots;
   }

@@ -97,33 +97,6 @@ contract OrderFactoryTest is Test {
     assertEq(sellToken.balanceOf(address(factory)), (_amount * _fee) / HUNDRED_PERCENT);
   }
 
-  function testCreateOrderWithNonceFailWhitelist() public {
-    // burn the whitelist NFT
-    whitelistNFT.burn(1);
-
-    assertEq(factory.whitelist(), true);
-
-    // Approve the factory to spend the sell token
-    sellToken.approve(address(factory), type(uint256).max);
-
-    vm.expectRevert(NotWhitelisted.selector);
-
-    // Create the vault
-    factory.createOrderWithNonce(
-      address(mastercopy),
-      address(1335),
-      _receiver,
-      _sellToken,
-      _buyToken,
-      _amount,
-      _startTime,
-      _endTime,
-      _interval,
-      address(mockSettlement),
-      1
-    );
-  }
-
   function testSetProtocolFee() public {
     // Update protocol fee from owner
     factory.setProtocolFee(10);

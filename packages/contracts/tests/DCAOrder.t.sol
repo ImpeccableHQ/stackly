@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "forge-std/Test.sol";
+import 'forge-std/Test.sol';
 
-import {GasMeter} from "./helper/GasMeter.sol";
-import {ERC20Mintable} from "./common/ERC20Mintable.sol";
-import {MockSettlement} from "./common/MockSettlement.sol";
-import {SafeMath} from "oz/utils/math/SafeMath.sol";
+import {GasMeter} from './helper/GasMeter.sol';
+import {ERC20Mintable} from './common/ERC20Mintable.sol';
+import {MockSettlement} from './common/MockSettlement.sol';
+import {SafeMath} from 'oz/utils/math/SafeMath.sol';
 
-import {GPv2Order} from "../src/libraries/GPv2Order.sol";
-import {DCAOrder, NotOwner, NotWithinStartAndEndTimes} from "../src/DCAOrder.sol";
-import {IConditionalOrder} from "../src/interfaces/IConditionalOrder.sol";
+import {GPv2Order} from '../src/libraries/GPv2Order.sol';
+import {DCAOrder, NotOwner, NotWithinStartAndEndTimes} from '../src/DCAOrder.sol';
+import {IConditionalOrder} from '../src/interfaces/IConditionalOrder.sol';
 
 contract DCAOrderTest is Test, GasMeter {
   using GPv2Order for GPv2Order.Data;
@@ -31,7 +31,17 @@ contract DCAOrderTest is Test, GasMeter {
   event ConditionalOrderCreated(address indexed);
 
   // @todo: import from DCAOrder
-  event Initialized(address indexed order);
+  event Initialized(
+    address indexed order,
+    address owner,
+    address receiver,
+    address sellToken,
+    address buyToken,
+    uint256 amount,
+    uint256 startTime,
+    uint256 endTime,
+    uint256 interval
+  );
   event Cancelled(address indexed order);
 
   function setUp() public {
@@ -55,10 +65,28 @@ contract DCAOrderTest is Test, GasMeter {
     emit ConditionalOrderCreated(address(dcaOrder));
 
     vm.expectEmit(true, true, false, true, address(dcaOrder));
-    emit Initialized(address(dcaOrder));
 
+    emit Initialized(
+      address(dcaOrder), // order
+      _owner, // owner
+      _receiver, // receiver
+      _sellToken, // sellToken
+      _buyToken, // buyToken
+      _amount, // amount
+      _startTime, // startTime
+      _endTime, // endTime
+      _interval // interval
+    );
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     // Assert all properties are set correctly
@@ -75,27 +103,51 @@ contract DCAOrderTest is Test, GasMeter {
 
   function testInitialize_AlreadyInitialized() public {
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
-    vm.expectRevert(bytes4(keccak256("AlreadyInitialized()")));
+    vm.expectRevert(bytes4(keccak256('AlreadyInitialized()')));
 
     // Try to initialize again
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
   }
 
   function testInitialize_MissingOwner() public {
-    vm.expectRevert(bytes4(keccak256("MissingOwner()")));
+    vm.expectRevert(bytes4(keccak256('MissingOwner()')));
 
     dcaOrder.initialize(
-      address(0), _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      address(0),
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
   }
 
   function testInitialize_ReceiverIsOrder() public {
-    vm.expectRevert(bytes4(keccak256("ReceiverIsOrder()")));
+    vm.expectRevert(bytes4(keccak256('ReceiverIsOrder()')));
 
     dcaOrder.initialize(
       _owner,
@@ -111,32 +163,64 @@ contract DCAOrderTest is Test, GasMeter {
   }
 
   function testInitialize_IntervalMustBeGreaterThanZero() public {
-    vm.expectRevert(bytes4(keccak256("IntervalMustBeGreaterThanZero()")));
+    vm.expectRevert(bytes4(keccak256('IntervalMustBeGreaterThanZero()')));
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, 0, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      0,
+      address(mockSettlement)
     );
   }
 
   function testInitialize_InvalidStartTime() public {
-    vm.expectRevert(bytes4(keccak256("InvalidStartTime()")));
+    vm.expectRevert(bytes4(keccak256('InvalidStartTime()')));
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, block.timestamp, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      block.timestamp,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
   }
 
   function testInitialize_InvalidEndTime() public {
-    vm.expectRevert(bytes4(keccak256("InvalidEndTime()")));
+    vm.expectRevert(bytes4(keccak256('InvalidEndTime()')));
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, block.timestamp, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      block.timestamp,
+      _interval,
+      address(mockSettlement)
     );
   }
 
   function testSlots() public {
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     uint256[] memory slots = dcaOrder.orderSlots();
@@ -158,7 +242,15 @@ contract DCAOrderTest is Test, GasMeter {
     address newCleanOwner = address(0x10);
 
     dcaOrder.initialize(
-      newCleanOwner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      newCleanOwner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
     assertEq(sellToken.balanceOf(address(dcaOrder)), _amount);
     assertEq(sellToken.balanceOf(newCleanOwner), 0);
@@ -175,7 +267,15 @@ contract DCAOrderTest is Test, GasMeter {
 
   function testCannotCancelOrderIfNotOwner() public {
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
     vm.prank(address(0x1));
     vm.expectRevert(NotOwner.selector);
@@ -185,7 +285,15 @@ contract DCAOrderTest is Test, GasMeter {
   /// @dev add fuzzing to test the current slot
   function testCurrentSlot() public {
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
     vm.prank(address(0x1));
 
@@ -224,7 +332,15 @@ contract DCAOrderTest is Test, GasMeter {
     uint256 _testAmount = 30 ether;
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _testAmount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _testAmount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
     vm.prank(address(0x1));
 
@@ -262,7 +378,15 @@ contract DCAOrderTest is Test, GasMeter {
     uint256 _testAmount = 30 ether;
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _testAmount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _testAmount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     // warp to the startTime of the order
@@ -280,7 +404,15 @@ contract DCAOrderTest is Test, GasMeter {
     uint256 endTime = _startTime + (1 days * 365 * 2);
     uint256 interval = 1;
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, 30 ether, _startTime, endTime, interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      30 ether,
+      _startTime,
+      endTime,
+      interval,
+      address(mockSettlement)
     );
 
     // warp to the startTime of the order
@@ -297,13 +429,21 @@ contract DCAOrderTest is Test, GasMeter {
     uint256 _testPrincipal = 30 ether;
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _testPrincipal, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _testPrincipal,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     // Cancel the order
     dcaOrder.cancel();
 
-    vm.expectRevert(bytes4(keccak256("OrderCancelled()")));
+    vm.expectRevert(bytes4(keccak256('OrderCancelled()')));
     dcaOrder.getTradeableOrder();
   }
 
@@ -311,11 +451,19 @@ contract DCAOrderTest is Test, GasMeter {
     uint256 _testPrincipal = 0 ether;
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _testPrincipal, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _testPrincipal,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     vm.warp(dcaOrder.startTime());
-    vm.expectRevert(bytes4(keccak256("ZeroSellAmount()")));
+    vm.expectRevert(bytes4(keccak256('ZeroSellAmount()')));
     dcaOrder.getTradeableOrder();
   }
 
@@ -323,7 +471,15 @@ contract DCAOrderTest is Test, GasMeter {
     _endTime = _startTime + 6 weeks;
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
     // In a 6 week period, there should be 6 * 7 * 24 = 1008 slots
     uint256[] memory slots = dcaOrder.orderSlots();
@@ -373,7 +529,15 @@ contract DCAOrderTest is Test, GasMeter {
     sellToken.transfer(address(dcaOrder), _testAmount);
 
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _testAmount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _testAmount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     uint256 orderSlotsLength = dcaOrder.orderSlots().length;
@@ -398,7 +562,15 @@ contract DCAOrderTest is Test, GasMeter {
 
   function testisValidSignature() public {
     dcaOrder.initialize(
-      _owner, _receiver, _sellToken, _buyToken, _amount, _startTime, _endTime, _interval, address(mockSettlement)
+      _owner,
+      _receiver,
+      _sellToken,
+      _buyToken,
+      _amount,
+      _startTime,
+      _endTime,
+      _interval,
+      address(mockSettlement)
     );
 
     // Advances block.timestamp by n seconds

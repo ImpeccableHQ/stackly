@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {IERC20} from "oz/token/ERC20/IERC20.sol";
-import {SafeERC20} from "oz/token/ERC20/utils/SafeERC20.sol";
-import {IGPv2Settlement} from "./interfaces/IGPv2Settlement.sol";
-import {IConditionalOrder} from "./interfaces/IConditionalOrder.sol";
-import {IDCAOrder} from "./interfaces/IDCAOrder.sol";
-import {GPv2Order} from "./libraries/GPv2Order.sol";
-import {GPv2EIP1271, EIP1271Verifier} from "./interfaces/EIP1271Verifier.sol";
-import {BokkyPooBahsDateTimeLibrary} from "date/BokkyPooBahsDateTimeLibrary.sol";
-import {SafeMath} from "oz/utils/math/SafeMath.sol";
-import {Math} from "oz/utils/math/Math.sol";
+import {IERC20} from 'oz/token/ERC20/IERC20.sol';
+import {SafeERC20} from 'oz/token/ERC20/utils/SafeERC20.sol';
+import {IGPv2Settlement} from './interfaces/IGPv2Settlement.sol';
+import {IConditionalOrder} from './interfaces/IConditionalOrder.sol';
+import {IDCAOrder} from './interfaces/IDCAOrder.sol';
+import {GPv2Order} from './libraries/GPv2Order.sol';
+import {GPv2EIP1271, EIP1271Verifier} from './interfaces/EIP1271Verifier.sol';
+import {BokkyPooBahsDateTimeLibrary} from 'date/BokkyPooBahsDateTimeLibrary.sol';
+import {SafeMath} from 'oz/utils/math/SafeMath.sol';
+import {Math} from 'oz/utils/math/Math.sol';
 
 error OrderCancelled();
 error NotOwner();
@@ -49,7 +49,17 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
   /// @dev The initial amount of the DCA order.
   uint256 public amount;
 
-  event Initialized(address indexed order);
+  event Initialized(
+    address indexed order,
+    address owner,
+    address receiver,
+    address sellToken,
+    address buyToken,
+    uint256 amount,
+    uint256 startTime,
+    uint256 endTime,
+    uint256 interval
+  );
   event Cancelled(address indexed order);
 
   /// @dev Initializes the DCAOrder with the specified parameters.
@@ -112,7 +122,17 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
     IERC20(_sellToken).safeApprove(address(IGPv2Settlement(_settlementContract).vaultRelayer()), type(uint256).max);
     emit ConditionalOrderCreated(address(this)); // Required by COW to watch this contract
     // Emit Initialized event for indexing
-    emit Initialized(address(this));
+    emit Initialized(
+      address(this), // order
+      _owner, // owner
+      _receiver, // receiver
+      _sellToken, // sellToken
+      _buyToken, // buyToken
+      _amount, // amount
+      _startTime, // startTime
+      _endTime, // endTime
+      _interval // interval
+    );
     return true;
   }
 
@@ -149,20 +169,21 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
     // ensures that orders queried shortly after one another result in the same hash (to avoid spamming the orderbook)
     // solhint-disable-next-line not-rely-on-time
     uint32 currentTimeBucket = ((uint32(orderExecutionTime) / 900) + 1) * 900;
-    return GPv2Order.Data(
-      sellToken,
-      buyToken,
-      receiver, // The receiver
-      orderSellAmount,
-      1, // 0 buy amount is not allowed
-      currentTimeBucket + 900, // between 15 and 30 miunte validity
-      keccak256("DollarCostAveraging"),
-      0,
-      GPv2Order.KIND_SELL,
-      false,
-      GPv2Order.BALANCE_ERC20,
-      GPv2Order.BALANCE_ERC20
-    );
+    return
+      GPv2Order.Data(
+        sellToken,
+        buyToken,
+        receiver, // The receiver
+        orderSellAmount,
+        1, // 0 buy amount is not allowed
+        currentTimeBucket + 900, // between 15 and 30 miunte validity
+        keccak256('DollarCostAveraging'),
+        0,
+        GPv2Order.KIND_SELL,
+        false,
+        GPv2Order.BALANCE_ERC20,
+        GPv2Order.BALANCE_ERC20
+      );
     // uint32 currentTimeBucket = ((uint32(block.timestamp) / 900) + 1) * 900;
   }
 
@@ -170,12 +191,12 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
   /// @param encodedOrder Bytes-encoded order information, originally created by an off-chain bot. Created by concatening the order data (in the form of GPv2Order.Data), the price checker address, and price checker data.
   function isValidSignature(bytes32 orderDigest, bytes calldata encodedOrder) external view override returns (bytes4) {
     GPv2Order.Data memory order = abi.decode(encodedOrder, (GPv2Order.Data));
-    require(order.hash(domainSeparator) == orderDigest, "encoded order digest mismatch");
+    require(order.hash(domainSeparator) == orderDigest, 'encoded order digest mismatch');
 
     // If getTradeableOrder() may change between blocks (e.g. because of a variable exchange rate or exprity date, perform a proper attribute comparison with `order` here instead of matching full hashes)
     require(
       IConditionalOrder(this).getTradeableOrder().hash(domainSeparator) == orderDigest,
-      "encoded order != tradable order"
+      'encoded order != tradable order'
     );
 
     return GPv2EIP1271.MAGICVALUE;
@@ -208,7 +229,7 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
     if (currentTime > endTime) {
       return 0;
     }
-    
+
     uint256 intervalTimestamp = interval * 1 hours;
     return _startTime + (((currentTime - _startTime) / intervalTimestamp) * intervalTimestamp);
   }
@@ -217,7 +238,9 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
   /// @return bool True if the current timestamp corresponds to the last time slot, otherwise false.
   function isLastSlot() public view returns (bool) {
     uint256 intervalTimestamp = interval * 1 hours;
-    return ((startTime + ((((block.timestamp - startTime) / intervalTimestamp) + 1) * intervalTimestamp)) + intervalTimestamp) > endTime;
+    return
+      ((startTime + ((((block.timestamp - startTime) / intervalTimestamp) + 1) * intervalTimestamp)) +
+        intervalTimestamp) > endTime;
   }
 
   /// @dev returns the sell amount for the each slot
@@ -230,12 +253,15 @@ contract DCAOrder is IConditionalOrder, EIP1271Verifier, IDCAOrder {
     if (isLastSlot()) {
       return sellToken.balanceOf(address(this));
     }
-    
+
     if (block.timestamp >= _endTime) {
       return 0;
     }
 
     // amount divided by total amount of orders
-    (, orderSellAmount) = SafeMath.tryDiv(amount, (Math.ceilDiv(BokkyPooBahsDateTimeLibrary.diffHours(startTime, _endTime), interval)));
+    (, orderSellAmount) = SafeMath.tryDiv(
+      amount,
+      (Math.ceilDiv(BokkyPooBahsDateTimeLibrary.diffHours(startTime, _endTime), interval))
+    );
   }
 }

@@ -12,11 +12,13 @@ eth_rpc_url = 'https://rpc.gnosischain.com'
 ethereum = "${ETHEREUM_RPC_URL}"
 gnosis = "${GNOSIS_RPC_URL}"
 arbitrum = "${ARBITRUM_RPC_URL}"
+base = "${BASE_RPC_URL}"
 
-[etherscan]
+[block_explorer]
 ethereum = { key = "${ETHERSCAN_API_KEY}" }
 gnosis = { key = "${GNOSISSCAN_API_KEY}" }
 arbitrum = { key = "${ARBITRUM_API_KEY}" }
+base = { key = "${BASE_API_KEY}" }
 
 [fmt]
 tab_width = 2
